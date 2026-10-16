@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../models/app_notification.dart';
 import '../models/todo_item.dart';
 import '../providers/app_state_scope.dart';
 import '../providers/todo_provider.dart';
 import '../widgets/add_todo_sheet.dart';
+import '../widgets/custom_app_bar.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/notifications_sheet.dart';
+import '../widgets/profile_sheet.dart';
 import '../widgets/summary_header.dart';
 import '../widgets/todo_tile.dart';
 
@@ -16,6 +20,33 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  List<AppNotification> _notifications = <AppNotification>[
+    AppNotification(
+      id: '1',
+      title: 'Welcome to Project 64A',
+      message: 'Organize, prioritize, and achieve your daily goals seamlessly.',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+      isRead: false,
+      type: NotificationType.info,
+    ),
+    AppNotification(
+      id: '2',
+      title: 'Task Reminder',
+      message: 'Review pending tasks and check them off once finished.',
+      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
+      isRead: false,
+      type: NotificationType.reminder,
+    ),
+    AppNotification(
+      id: '3',
+      title: 'Great Progress',
+      message: 'Keep going to achieve 100% completion today!',
+      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
+      isRead: true,
+      type: NotificationType.achievement,
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +55,27 @@ class _HomePageState extends State<HomePage> {
         AppStateScope.read(context).init();
       }
     });
+  }
+
+  void _openNotifications() {
+    NotificationsSheet.show(
+      context,
+      notifications: _notifications,
+      onNotificationsChanged: (List<AppNotification> updated) {
+        setState(() {
+          _notifications = updated;
+        });
+      },
+    );
+  }
+
+  void _openProfile(TodoState state) {
+    ProfileSheet.show(
+      context,
+      totalTasks: state.totalCount,
+      completedTasks: state.completedCount,
+      activeTasks: state.activeCount,
+    );
   }
 
   void _openAddSheet() {
@@ -60,37 +112,18 @@ class _HomePageState extends State<HomePage> {
     // `watch` subscribes this screen to notifier changes.
     final TodoState state = AppStateScope.watch(context).state;
     final TodoProvider provider = AppStateScope.read(context);
+    final int unreadNotifications =
+        _notifications.where((AppNotification n) => !n.isRead).length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Tasks'),
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Reload',
-            onPressed: state.isRefreshing ? null : provider.reload,
-            icon: state.isRefreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (String value) {
-              if (value == 'clear') {
-                provider.clearCompleted();
-              }
-            },
-            itemBuilder: (BuildContext context) =>
-                const <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(
-                    value: 'clear',
-                    child: Text('Clear completed'),
-                  ),
-                ],
-          ),
-        ],
+      appBar: CustomAppBar(
+        title: 'My Tasks',
+        unreadNotificationsCount: unreadNotifications,
+        isRefreshing: state.isRefreshing,
+        onReloadPressed: provider.reload,
+        onNotificationsPressed: _openNotifications,
+        onProfilePressed: () => _openProfile(state),
+        onClearCompleted: provider.clearCompleted,
       ),
       body: SafeArea(child: _buildBody(context, state)),
       floatingActionButton: FloatingActionButton.extended(

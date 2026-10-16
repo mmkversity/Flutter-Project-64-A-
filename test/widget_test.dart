@@ -8,6 +8,8 @@ import 'package:project_64a/providers/todo_provider.dart';
 import 'package:project_64a/screens/home_page.dart';
 import 'package:project_64a/services/storage_service.dart';
 import 'package:project_64a/services/todo_repository.dart';
+import 'package:project_64a/widgets/notifications_sheet.dart';
+import 'package:project_64a/widgets/profile_sheet.dart';
 import 'package:project_64a/widgets/summary_header.dart';
 
 TodoRepository _repository() =>
@@ -102,5 +104,59 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.state.completedCount, 2);
+  });
+
+  testWidgets('HomePage renders Notification and Profile icons in the AppBar', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(TodoProvider(_repository())));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Profile'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.person), findsOneWidget);
+  });
+
+  testWidgets('Tapping Notification icon opens NotificationsSheet', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(TodoProvider(_repository())));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NotificationsSheet), findsOneWidget);
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.text('Welcome to Project 64A'), findsOneWidget);
+    expect(find.text('Task Reminder'), findsOneWidget);
+  });
+
+  testWidgets('Tapping Profile icon opens ProfileSheet with user stats', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(TodoProvider(_repository())));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Raitul Hasan'), findsOneWidget);
+    expect(find.text('Account Details'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ProfileSheet),
+        matching: find.text('Total'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ProfileSheet),
+        matching: find.text('Done'),
+      ),
+      findsOneWidget,
+    );
   });
 }
